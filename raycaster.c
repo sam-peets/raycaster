@@ -75,7 +75,7 @@ float cast(player* player, float theta, vec2* ray) {
 				}
 				division*=2;
 			}
-			return distance_traveled;
+			return distance_traveled * cos(deg_to_rad(abs(theta - player->angle)));
 		}
 		distance_traveled+=STEP_SIZE;
 		add_delta(ray, STEP_SIZE, theta);
@@ -165,6 +165,7 @@ void update_vel(player* player) {
 	add_vec(&(player->position), &(player->vel));
 	player->angle += player->look_vel;
 
+	// collision
 	if (player->position.x <= 1.5)
 		player->position.x = 1.5;
 	if (player->position.y <= 1.5)
@@ -204,6 +205,7 @@ int main(int argc, char* argv[]) {
 		draw(p, player);
 		memcpy(surface->pixels, p, surface->h * surface->pitch * sizeof(char));
 
+		// fps limit
 		int time = SDL_GetTicks() - start;
 		if (time < 0) continue;
 		int sleepTime = 1000/60 - time;
@@ -226,6 +228,7 @@ int main(int argc, char* argv[]) {
 	}
 quit:
 	free(p);
+	free(player);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
