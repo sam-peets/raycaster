@@ -10,7 +10,7 @@
 #define MAP_SIZE_Y 16
 
 int map[MAP_SIZE_X][MAP_SIZE_Y] = {
-	{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+	{1,2,3,4,1,1,1,1,1,1,1,1,1,1,1,1},
 	{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
 	{1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1},
 	{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -28,7 +28,7 @@ int map[MAP_SIZE_X][MAP_SIZE_Y] = {
 	{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
 };
 
-
+typedef struct distance_colour {float d; int r; int g; int b;} distance_colour;
 typedef struct vec2 {float x; float y;} vec2;
 typedef struct player {vec2 position; float angle; vec2 vel; float look_vel;} player;
 
@@ -54,20 +54,33 @@ void set_pixel(char* p, char r, char g, char b, int x, int y) {
 	p[WINDOW_WIDTH*4*y + 4*x + 3] = 255;
 }
 
-float cast(player* player, float theta, vec2* ray) {
+
+
+distance_colour* cast(player* player, float theta, vec2* ray) {
+	distance_colour* dc = malloc(sizeof(distance_colour));
+	dc->d = 1000.0;
+	dc->r = 255;
+	dc->g = 255;
+	dc->b = 255;
+
 	ray->x = player->position.x;
 	ray->y = player->position.y;
-
+	
 	float distance_traveled = 0;
+
 	while(distance_traveled < MAX_DISTANCE) {
 		int cx = (int)floor(ray->x);
 		int cy = (int)floor(ray->y);
-		if (map[cx][cy] == 1) {
+
+		if (map[cx][cy] >= 1) {
+
+			int hit = map[cx][cy];
 			float division = 2;
 			for (int i = 0; i < BACK_STEPS; i++) {
 				cx = (int)floor(ray->x);
-				cy = (int)floor(ray->y);	
-				if (map[cx][cy] == 1) {
+				cy = (int)floor(ray->y);
+				
+				if (map[cx][cy] >= 1) {
 					add_delta(ray,-1.0*STEP_SIZE/division, theta);
 					distance_traveled -= STEP_SIZE/division;
 				} else {
@@ -77,12 +90,35 @@ float cast(player* player, float theta, vec2* ray) {
 				}
 				division*=2;
 			}
-			return distance_traveled * cos(deg_to_rad(abs(theta - player->angle)));
+			dc->d =  distance_traveled * cos(deg_to_rad(abs(theta - player->angle)));
+			switch(hit) {
+				case 1:
+					dc->r = 255;
+					dc->g = 255;
+					dc->b = 255;
+					break;
+				case 2:
+					dc->r = 255;
+					dc->g = 0;
+					dc->b = 0;
+					break;
+				case 3:
+					dc->r = 0;
+					dc->g = 255;
+					dc->b = 0;
+					break;
+				case 4:
+					dc->r = 0;
+					dc->g = 0;
+					dc->b = 255;
+					break;	
+			}
+			break;
 		}
 		distance_traveled+=STEP_SIZE;
 		add_delta(ray, STEP_SIZE, theta);
 	}
-	return distance_traveled;
+	return dc;
 }
 
 void draw_line(char* p, char r, char g, char b, int x, int l) {
@@ -104,7 +140,7 @@ void draw_box(char* p, int x1, int y1, int x2, int y2, int r, int g, int b) {
 void draw_minimap(char* p, int size, player* player) {
 	for (int y = 0; y < MAP_SIZE_Y; y++) {
 		for (int x = 0; x < MAP_SIZE_X; x++) {
-			int c = map[x][y] == 1 ? 255 : 0;
+			int c = map[x][y] >= 1 ? 255 : 0;
 			draw_box(p, x*size, y*size, x*size + size, y*size + size, c, c, c);
 		}
 	}
@@ -131,13 +167,15 @@ void draw(char* p, player* player) {
 	for (int i = 0; i < WINDOW_WIDTH; i++) {
 		
 		float theta = fmod(start_angle + i*fov_step, 360.0);
-		float d = cast(player, theta, ray);
-		if (WINDOW_WIDTH/d > WINDOW_WIDTH)
-			d = 1;
-		float l = WINDOW_WIDTH/d;
+		distance_colour* dc = cast(player, theta, ray);
+		if (WINDOW_WIDTH/dc->d > WINDOW_WIDTH)
+			dc->d = 1.0;
+
+		float l = WINDOW_WIDTH/dc->d;
 		l = l > 0 ? l : 0;
 
-		draw_line(p, 255/d, 255/d, 255/d, i, l);
+		draw_line(p, dc->r/dc->d, dc->g/dc->d, dc->b/dc->d, i, l);
+		free(dc);
 	}
 	free(ray);
 
