@@ -2,17 +2,19 @@
 #include <SDL2/SDL.h>
 #include <math.h>
 
-#define WINDOW_WIDTH 300
+#define WINDOW_WIDTH 400
 #define STEP_SIZE 0.1
 #define MAX_DISTANCE 10
 #define BACK_STEPS 10
+#define MAP_SIZE_X 16
+#define MAP_SIZE_Y 16
 
-int map[16][16] = {
+int map[MAP_SIZE_X][MAP_SIZE_Y] = {
 	{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
 	{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
 	{1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1},
-	{1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1},
-	{1,0,0,0,1,0,0,1,1,1,1,1,1,1,0,1},
+	{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+	{1,0,0,0,0,0,0,1,1,1,1,1,1,1,0,1},
 	{1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1},
 	{1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1},
 	{1,0,0,0,0,1,0,1,1,1,1,0,0,0,0,1},
@@ -83,11 +85,33 @@ float cast(player* player, float theta, vec2* ray) {
 	return distance_traveled;
 }
 
-float draw_line(char* p, char r, char g, char b, int x, int l) {
+void draw_line(char* p, char r, char g, char b, int x, int l) {
 	int start = WINDOW_WIDTH/2 - l/2;
 	for (int i = 0; i < l; i++) {
 		set_pixel(p, r,g,b, x, start+i);
 	}
+}
+
+void draw_box(char* p, int x1, int y1, int x2, int y2, int r, int g, int b) {
+	for (int x = x1; x < x2; x++) {
+		for (int y = y1; y < y2; y++) {
+			set_pixel(p, r,g,b, x,y);
+		}
+	}
+
+}
+
+void draw_minimap(char* p, int size, player* player) {
+	for (int y = 0; y < MAP_SIZE_Y; y++) {
+		for (int x = 0; x < MAP_SIZE_X; x++) {
+			int c = map[x][y] == 1 ? 255 : 0;
+			draw_box(p, x*size, y*size, x*size + size, y*size + size, c, c, c);
+		}
+	}
+
+	int x1 = player->position.x*size;
+	int y1 = player->position.y*size;
+	draw_box(p, x1-size/2,y1-size/2,x1+size/2,y1+size/2,255,0,0);
 }
 
 void draw(char* p, player* player) {
@@ -203,6 +227,7 @@ int main(int argc, char* argv[]) {
 		if(SDL_MUSTLOCK(surface)){ SDL_LockSurface(surface); }
 		update_vel(player);
 		draw(p, player);
+		draw_minimap(p,4,player);
 		memcpy(surface->pixels, p, surface->h * surface->pitch * sizeof(char));
 
 		// fps limit
